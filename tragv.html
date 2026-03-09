@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HUST Teacher Search Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #e63946;
+            --secondary-color: #1d3557;
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --glass-bg: rgba(255, 255, 255, 0.9);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.3);
+            transform: translateY(0);
+            transition: var(--transition);
+        }
+
+        h2 {
+            color: var(--secondary-color);
+            font-weight: 700;
+            margin-bottom: 30px;
+            letter-spacing: -1px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            box-sizing: border-box;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(230, 57, 70, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        button:hover {
+            background-color: #d62828;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(230, 57, 70, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        #result-container {
+            margin-top: 30px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .teacher-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 16px;
+            width: 100%;
+            border-left: 5px solid var(--primary-color);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            animation: slideUp 0.4s ease-out;
+        }
+
+        .label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #888;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .name {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--secondary-color);
+        }
+
+        .no-teacher {
+            color: #666;
+            font-style: italic;
+            font-weight: 500;
+        }
+
+        /* Hiệu ứng Loading */
+        .loader {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #FFF;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .footer-note {
+            margin-top: 20px;
+            font-size: 11px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>HUST Teacher Finder</h2>
+    
+    <div class="input-group">
+        <input type="text" id="classCode" placeholder="Nhập mã lớp (VD: 123456)" onkeyup="if(event.key==='Enter') search()">
+    </div>
+
+    <button onclick="search()" id="btnSearch">
+        <span id="btnText">Tra cứu ngay</span>
+    </button>
+
+    <div id="result-container">
+        </div>
+
+    <div class="footer-note">
+        Lưu ý: Bạn cần đăng nhập SIS/e-Hust để tránh lỗi truy cập API.
+    </div>
+</div>
+
+<script>
+async function search() {
+    const classCode = document.getElementById('classCode').value.trim();
+    const resultContainer = document.getElementById('result-container');
+    const btnText = document.getElementById('btnText');
+    const btnSearch = document.getElementById('btnSearch');
+
+    if (!classCode) return;
+
+    // Trạng thái Loading
+    btnSearch.disabled = true;
+    btnText.innerHTML = '<span class="loader"></span>';
+    resultContainer.innerHTML = '';
+
+    try {
+        //  API lấy teacherIds từ mã lớp
+        const res = await fetch(`https://e.hust.edu.vn/gcp-student-services/api/crs/register-class/courses?checkPhaseInfo=false&searchValue=${classCode}`);
+        const data = await res.json();
+
+        // Tìm lớp khớp mã 
+        const course = data.find(c => c.classCode === classCode) || data[0];
+
+        // Nếu không có giảng viên hoặc mảng ID rỗng
+        if (!course || !course.teacherIds || course.teacherIds.length === 0) {
+            resultContainer.innerHTML = '<span class="no-teacher">Chưa có GV</span>';
+        } else {
+            let names = [];
+            for (let id of course.teacherIds) {
+                //  API lấy chi tiết giảng viên từ ID
+                const tRes = await fetch(`https://e.hust.edu.vn/gcp-student-services/api/v1/teachers/${id}`);
+                const tData = await tRes.json();
+                if (tData.fullName) names.push(tData.fullName);
+            }
+
+            if (names.length > 0) {
+                resultContainer.innerHTML = `
+                    <div class="teacher-card">
+                        <span class="label">Giảng viên phụ trách</span>
+                        <div class="name">${names.join(' • ')}</div>
+                    </div>
+                `;
+            } else {
+                resultContainer.innerHTML = '<span class="no-teacher">Chưa có GV</span>';
+            }
+        }
+    } catch (err) {
+        resultContainer.innerHTML = '<div style="color:#e63946; font-size:13px">Lỗi kết nối. Hãy đảm bảo bạn đã đăng nhập e.hust.edu.vn</div>';
+    } finally {
+        btnSearch.disabled = false;
+        btnText.innerHTML = 'Tra cứu ngay';
+    }
+}
+</script>
+
+</body>
+</html>
